@@ -1,0 +1,35 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/EventContract.sol": {
+      "content": "// SPDX-License-Identifier: mit\npragma solidity ^0.8.8;\n\ncontract EventContract {\n    struct Event {\n        address admin;\n        string name;\n        uint256 date;\n        uint256 price;\n        uint256 ticketCount;\n        uint256 ticketRemaining;\n    }\n\n    mapping(uint256 => Event) public events;\n    mapping(address => mapping(uint256 => uint256)) public tickets;\n    uint256 public nextId;\n    address payable owner;\n\n    constructor() {\n        owner = payable(msg.sender);\n    }\n\n    function createEvent(\n        string calldata name,\n        uint256 date,\n        uint256 price,\n        uint256 ticketCount\n    ) external {\n        require(\n            block.timestamp + date > block.timestamp,\n            \"event can only organize in the future\"\n        );\n        require(\n            ticketCount > 0,\n            \"can only create event with at least one ticket available\"\n        );\n        events[nextId] = Event(\n            msg.sender,\n            name,\n            date,\n            price,\n            ticketCount,\n            ticketCount\n        );\n        nextId++;\n    }\n\n    function buyTicket(uint256 id, uint256 quantity)\n        external\n        payable\n        eventExist(id)\n        eventActive(id)\n    {\n        Event storage _event = events[id];\n\n        require(\n            msg.value == (_event.price * quantity),\n            \"not enough ether sent\"\n        );\n        require(_event.ticketRemaining >= quantity, \"not enough ticket left\");\n        _event.ticketRemaining -= quantity;\n        tickets[msg.sender][id] += quantity;\n    }\n\n    function ticketTransfer(\n        uint256 eventId,\n        uint256 quantity,\n        address to\n    ) external eventExist(eventId) eventActive(eventId) {\n        require(tickets[msg.sender][eventId] >= quantity, \"not enough tickets\");\n        tickets[msg.sender][eventId] -= quantity;\n        tickets[to][eventId] += quantity;\n    }\n\n    function withdraw() public {\n        owner.transfer(address(this).balance);\n    }\n\n    modifier eventExist(uint256 id) {\n        require(events[id].date != 0, \"this event does not exist\");\n        _;\n    }\n    modifier eventActive(uint256 id) {\n        require(\n            block.timestamp < events[id].date,\n            \"this event is not active anymore\"\n        );\n        _;\n    }\n}\n\n// contract StateMachine {\n//     enum State {\n//         PENDING,\n//         ACTIVE,\n//         CLOSED\n//     }\n//     State public state = State.PENDING;\n//     uint256 public amount;\n//     uint256 public interest;\n//     uint256 public end;\n//     address payable public borrower;\n//     address payable public lender;\n\n//     constructor(\n//         uint256 _amount,\n//         uint256 _interest,\n//         uint256 _duration,\n//         address payable _borrower,\n//         address payable _lender\n//     ) {\n//         amount = _amount;\n//         interest = _interest;\n//         end = block.timestamp + _duration;\n//         borrower = _borrower;\n//         lender = _lender;\n//     }\n\n//     function fund() external payable {\n//         require(msg.sender == lender, \"only lender can lend\");\n//         require(address(this).balance == amount, \"can only lend exact amount\");\n//         borrower.transfer(amount);\n//     }\n\n//     function reimburse() external payable {\n//         require(msg.sender == borrower, \"only borrowr can reimburse\");\n//         require(\n//             msg.value == amount + interest,\n//             \"borrower need to reimburse amount + interest\"\n//         );\n//         lender.transfer(amount + interest);\n//     }\n// }\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": false,
+      "runs": 200
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}
